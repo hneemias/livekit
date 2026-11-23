@@ -1,85 +1,71 @@
-# LiveKit Server - Self-Hosted Deploy & Painel de Controle
+# LiveKit Server - Self-Hosted Deploy no Coolify (Hostinger)
 
-Projeto completo para rodar o **LiveKit Server** de forma independente (Self-Hosted), seja localmente no Windows ou em uma **VPS na nuvem (Hostinger, Hetzner, AWS, etc.)**, com **Docker Compose**, **HTTPS/SSL automático (Caddy)** e **Painel de Moderação/Administração de Usuários**.
-
----
-
-## 🔒 Segurança: Como o LiveKit Protege sua Máquina?
-
-O LiveKit Server é **blindado por criptografia JWT**:
-1. **Zero Acesso Público**: Ninguém consegue entrar em uma sala ou gastar CPU/banda da sua VPS sem um Token de Acesso assinado pelo seu `LIVEKIT_API_SECRET`.
-2. **Controle Total no Backend**: Apenas os usuários autenticados no seu sistema (ex: os técnicos logados no ERP) recebem tokens para se conectar.
-3. **Painel de Moderação**: Você pode ver em tempo real quem está conectado e desconectar (*kick*) invasores com 1 clique.
+Projeto configurado e otimizado para deploy em **1 clique no Coolify** na sua VPS da Hostinger, com **HTTPS/WSS automático (Traefik/Let's Encrypt)**, WebRTC otimizado e **Painel de Moderação de Usuários**.
 
 ---
 
-## 📁 Estrutura do Repositório
+## 🚀 Como Fazer o Deploy no Coolify (Passo a Passo)
 
-```text
-├── docker-compose.yml          # Orquestração do LiveKit Server + Caddy SSL
-├── livekit.production.yaml     # Configuração de produção para a VPS
-├── Caddyfile                   # Proxy reverso com HTTPS automático (Let's Encrypt)
-├── deploy-hostinger.sh         # Script de instalação automática na VPS
-├── admin-dashboard.html        # Painel Web de Administração (Ver salas e Chutar usuários)
-├── test-client.html            # Cliente de teste WebRTC com voz, chat e vídeo
-├── generate-test-token.ps1     # Gerador de tokens para usuários comuns
-├── generate-admin-token.ps1    # Gerador de tokens para o Painel Admin
-├── livekit.yaml                # Configuração para desenvolvimento local no Windows
-├── start-server.bat            # Execução rápida do servidor local
-└── .env.example                # Modelo de variáveis de ambiente
+### 1. Criar o apontamento de Domínio no seu DNS
+No painel onde está seu domínio (Hostinger, Cloudflare ou Registro.br):
+- Crie um registro do tipo **A**:
+  - **Nome**: `livekit` (ex: `livekit.seusite.com.br`)
+  - **Destino/IP**: O endereço IP da sua VPS Hostinger
+
+---
+
+### 2. Liberar as Portas WebRTC no Firewall da Hostinger
+O Coolify cuida das portas `80` e `443` automaticamente. Para o áudio/vídeo WebRTC do LiveKit fluir sem bloqueios, libere as seguintes portas no Firewall da VPS (pelo painel da Hostinger ou via terminal SSH):
+
+```bash
+sudo ufw allow 7881/tcp comment "LiveKit WebRTC TCP"
+sudo ufw allow 50000:50050/udp comment "LiveKit WebRTC UDP"
 ```
 
 ---
 
-## 🚀 Como Fazer o Deploy na VPS Hostinger (Passo a Passo)
+### 3. Adicionar o Projeto no Coolify
 
-### 1. Aponte seu Domínio
-No painel de DNS do seu domínio, crie um registro do tipo **A**:
-- **Nome**: `livekit` (ex: `livekit.seusite.com.br`)
-- **Destino / IP**: O endereço IP da sua VPS Hostinger
+1. Acesse o painel do seu **Coolify**.
+2. Clique em **+ Create Resource** -> **Git Based** -> **Public Repository** (ou conecte com sua conta GitHub).
+3. Cole a URL do repositório:
+   ```text
+   https://github.com/hneemias/livekit.git
+   ```
+4. Em **Build Pack**, selecione: **Docker Compose** (o Coolify já reconhecerá o `docker-compose.yml`).
+5. No campo **Domains**, informe o seu domínio com `https://`:
+   ```text
+   https://livekit.seusite.com.br
+   ```
+6. Vá na aba **Environment Variables** e adicione as duas chaves:
+   - `LIVEKIT_API_KEY`: (ex: crie uma chave forte como `lk_api_bancada_inovar`)
+   - `LIVEKIT_API_SECRET`: (ex: crie um segredo forte com letras e números)
+7. Clique em **Save** e depois em **Deploy**!
 
-### 2. Conecte na sua VPS via SSH
-```bash
-ssh root@SEU_IP_DA_VPS
-```
-
-### 3. Clone este repositório na VPS
-```bash
-git clone https://github.com/hneemias/livekit.git
-cd livekit
-```
-
-### 4. Configure o arquivo `.env`
-Copie o arquivo de exemplo e edite com seu domínio e senhas fortes:
-```bash
-cp .env.example .env
-nano .env
-```
-Exemplo:
-```env
-DOMAIN=livekit.seusite.com.br
-LIVEKIT_API_KEY=sua_chave_forte_aqui
-LIVEKIT_API_SECRET=seu_secret_muito_seguro_aqui
-```
-
-### 5. Execute o script de instalação
-```bash
-chmod +x deploy-hostinger.sh
-./deploy-hostinger.sh
-```
-O script cuidará de tudo: instalará o Docker, liberará as portas no firewall e subirá o LiveKit com certificado SSL automático!
+O Coolify vai baixar a imagem oficial do LiveKit, configurar o proxy reverso do Traefik com certificado SSL válido e iniciar o servidor!
 
 ---
 
 ## 🛡️ Como Usar o Painel Administrativo de Usuários
 
-1. Gere um Token de Administrador:
+Para monitorar quem está conectado na sua VPS e expulsar/chutar conexões indevidas:
+
+1. Gere um Token de Administrador localmente:
    ```powershell
-   .\generate-admin-token.ps1 -ApiKey "sua_chave" -ApiSecret "seu_secret"
+   .\generate-admin-token.ps1 -ApiKey "sua_chave_do_coolify" -ApiSecret "seu_secret_do_coolify"
    ```
-2. Abra o arquivo `admin-dashboard.html` no seu navegador.
-3. Insira a URL do seu LiveKit (ex: `https://livekit.seusite.com.br` ou `http://localhost:7880`) e cole o seu Token de Administrador.
-4. Clique em **Atualizar Salas**:
-   - Você verá todas as salas abertas e a lista de pessoas conectadas.
-   - Para desconectar qualquer usuário suspeito, basta clicar no botão vermelho **🚫 Desconectar (Kick)**.
+2. Abra o arquivo [admin-dashboard.html](file:///e:/projetos/LiveKit/admin-dashboard.html) no seu navegador.
+3. No campo URL, informe a URL do seu Coolify (ex: `https://livekit.seusite.com.br`) e cole o seu Admin Token.
+4. Clique em **"Atualizar Salas"**:
+   - Você verá todas as salas abertas e quem está conectado.
+   - Para desconectar qualquer usuário indevido, basta clicar no botão vermelho **🚫 Desconectar (Kick)**.
    - Para fechar uma sala inteira, clique em **❌ Fechar Sala**.
+
+---
+
+## 🧪 Testando a Conexão Remota
+
+Abra o arquivo [test-client.html](file:///e:/projetos/LiveKit/test-client.html):
+- **LiveKit WebSocket URL**: `wss://livekit.seusite.com.br`
+- **Token**: Um token gerado com o script `generate-test-token.ps1`.
+- Clique em **Conectar à Sala** para testar voz, chat e participantes em tempo real!

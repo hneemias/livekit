@@ -1,4 +1,4 @@
-﻿param(
+param(
     [string]$ApiKey = "devkey",
     [string]$ApiSecret = "secret"
 )

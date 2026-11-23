@@ -1,27 +1,16 @@
 services:
-  # Servidor LiveKit WebRTC
   livekit:
     image: livekit/livekit-server:latest
     restart: unless-stopped
-    network_mode: "host"
+    command: --config /etc/livekit.yaml
     volumes:
       - ./livekit.production.yaml:/etc/livekit.yaml
-    command: --config /etc/livekit.yaml
     environment:
       - LIVEKIT_KEYS=${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}
-
-  # Caddy: Proxy Reverso com SSL/HTTPS Automático (Let's Encrypt)
-  caddy:
-    image: caddy:alpine
-    restart: unless-stopped
-    network_mode: "host"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-      - caddy_data:/data
-      - caddy_config:/config
-    environment:
-      - DOMAIN=${DOMAIN}
-
-volumes:
-  caddy_data:
-  caddy_config:
+    ports:
+      # Porta HTTP / WebSocket (o Coolify / Traefik faz o proxy SSL para esta porta)
+      - "7880:7880"
+      # Porta WebRTC TCP fallback
+      - "7881:7881"
+      # Portas WebRTC UDP para áudio e vídeo de baixa latência
+      - "50000-50050:50000-50050/udp"
