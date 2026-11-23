@@ -22,3 +22,10 @@ services:
       - "7880:7880"
       - "7881:7881"
       - "50000-50050:50000-50050/udp"
+    networks:
+      - default
+      - coolify
+
+networks:
+  coolify:
+    external: true
