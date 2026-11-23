@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>LiveKit - Painel Administrativo de Controle</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #090d16;
+      color: #f1f5f9;
+      margin: 0;
+      padding: 24px;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .badge {
+      font-size: 0.8rem;
+      background: #dc2626;
+      color: white;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+    p {
+      color: #94a3b8;
+      margin-top: 0;
+    }
+    .card {
+      background: #131b2e;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 1px solid #1e293b;
+    }
+    .form-group {
+      margin-bottom: 14px;
+    }
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+    input, textarea {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px 12px;
+      border-radius: 6px;
+      border: 1px solid #334155;
+      background: #090d16;
+      color: #f8fafc;
+      font-size: 0.95rem;
+    }
+    .btn {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 9px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: background 0.2s;
+    }
+    .btn:hover { background: #1d4ed8; }
+    .btn-danger { background: #ef4444; }
+    .btn-danger:hover { background: #dc2626; }
+    .btn-warning { background: #f59e0b; color: #000; }
+    .btn-warning:hover { background: #d97706; }
+    .room-card {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .room-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #1e293b;
+      padding-bottom: 10px;
+      margin-bottom: 12px;
+    }
+    .participants-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    .participants-table th {
+      text-align: left;
+      color: #94a3b8;
+      padding: 8px;
+      border-bottom: 1px solid #334155;
+    }
+    .participants-table td {
+      padding: 8px;
+      border-bottom: 1px solid #1e293b;
+    }
+    .status-pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      background: #22c55e22;
+      color: #4ade80;
+      border: 1px solid #22c55e44;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🛡️ LiveKit - Painel de Controle e Moderação <span class="badge">ADMIN</span></h1>
+    <p>Monitore salas ativas, veja participantes conectados e derrube/bloqueie acessos indevidos.</p>
+
+    <div class="card">
+      <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 15px;">
+        <div class="form-group">
+          <label>URL do Servidor LiveKit:</label>
+          <input type="text" id="adminUrl" value="http://localhost:7880">
+        </div>
+        <div class="form-group">
+          <label>Token JWT de Administrador (Gere com .\generate-admin-token.ps1):</label>
+          <input type="password" id="adminToken" placeholder="Cole seu Admin Token aqui">
+        </div>
+      </div>
+      <button class="btn" onclick="loadDashboard()">🔄 Atualizar Salas e Participantes</button>
+      <button class="btn btn-warning" onclick="toggleTokenView()" style="margin-left: 8px;">👁️ Ver/Ocultar Token</button>
+    </div>
+
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h3 style="margin: 0;">Salas em Execução na VPS</h3>
+        <span id="roomCount" style="color: #94a3b8; font-size: 0.9rem;">0 salas encontradas</span>
+      </div>
+      <div id="roomsContainer">
+        <p style="color: #64748b;">Insira o Admin Token acima e clique em "Atualizar Salas".</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function toggleTokenView() {
+      const input = document.getElementById('adminToken');
+      input.type = input.type === 'password' ? 'text' : 'password';
+    }
+
+    async function callTwirp(service, method, body = {}) {
+      const url = document.getElementById('adminUrl').value.replace(/\/+$/, '');
+      const token = document.getElementById('adminToken').value.trim();
+
+      if (!token) {
+        alert("Por favor, cole um Token de Administrador.");
+        throw new Error("Token ausente");
+      }
+
+      const res = await fetch(`${url}/twirp/livekit.${service}/${method}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.msg || `Erro HTTP ${res.status}`);
+      }
+      return res.json();
+    }
+
+    async function loadDashboard() {
+      const container = document.getElementById('roomsContainer');
+      container.innerHTML = '<p style="color: #38bdf8;">Carregando informações do servidor...</p>';
+
+      try {
+        const data = await callTwirp('RoomService', 'ListRooms');
+        const rooms = data.rooms || [];
+        document.getElementById('roomCount').textContent = `${rooms.length} sala(s) ativa(s)`;
+
+        if (rooms.length === 0) {
+          container.innerHTML = '<p style="color: #94a3b8;">Nenhuma sala ativa no momento. Ninguém está consumindo recursos do servidor.</p>';
+          return;
+        }
+
+        container.innerHTML = '';
+        for (const room of rooms) {
+          await renderRoom(room, container);
+        }
+      } catch (err) {
+        container.innerHTML = `<p style="color: #ef4444;">❌ Erro ao consultar servidor: ${err.message}</p>`;
+      }
+    }
+
+    async function renderRoom(room, container) {
+      const div = document.createElement('div');
+      div.className = 'room-card';
+
+      // Buscar participantes da sala
+      let participants = [];
+      try {
+        const partData = await callTwirp('RoomService', 'ListParticipants', { room: room.name });
+        participants = partData.participants || [];
+      } catch (e) {
+        console.error(e);
+      }
+
+      div.innerHTML = `
+        <div class="room-header">
+          <div>
+            <strong style="font-size: 1.1rem; color: #38bdf8;">${escapeHtml(room.name)}</strong>
+            <span style="color: #94a3b8; font-size: 0.85rem; margin-left: 10px;">SID: ${room.sid}</span>
+            <span class="status-pill" style="margin-left: 8px;">${participants.length} participante(s)</span>
+          </div>
+          <button class="btn btn-danger" onclick="closeRoom('${escapeHtml(room.name)}')">❌ Fechar Sala</button>
+        </div>
+        <div>
+          ${participants.length === 0 ? '<p style="color: #64748b; margin: 6px 0;">Nenhum participante conectado nesta sala.</p>' : `
+            <table class="participants-table">
+              <thead>
+                <tr>
+                  <th>Identidade</th>
+                  <th>Nome</th>
+                  <th>IP / Região</th>
+                  <th>Status</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${participants.map(p => `
+                  <tr>
+                    <td><strong>${escapeHtml(p.identity)}</strong></td>
+                    <td>${escapeHtml(p.name || '-')}</td>
+                    <td style="color: #94a3b8;">${escapeHtml(p.clientInfo?.ip || 'Conectado')}</td>
+                    <td><span class="status-pill">${p.state || 'Ativo'}</span></td>
+                    <td>
+                      <button class="btn btn-danger" style="padding: 4px 10px; font-size: 0.8rem;" 
+                              onclick="kickUser('${escapeHtml(room.name)}', '${escapeHtml(p.identity)}')">
+                        🚫 Desconectar (Kick)
+                      </button>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          `}
+        </div>
+      `;
+      container.appendChild(div);
+    }
+
+    async function kickUser(roomName, identity) {
+      if (!confirm(`Deseja realmente desconectar e bloquear a sessão de "${identity}" da sala "${roomName}"?`)) return;
+
+      try {
+        await callTwirp('RoomService', 'RemoveParticipant', { room: roomName, identity: identity });
+        alert(`Participante "${identity}" foi desconectado imediatamente!`);
+        loadDashboard();
+      } catch (err) {
+        alert(`Erro ao desconectar usuário: ${err.message}`);
+      }
+    }
+
+    async function closeRoom(roomName) {
+      if (!confirm(`Deseja realmente encerrar a sala "${roomName}" e desconectar todos os usuários?`)) return;
+
+      try {
+        await callTwirp('RoomService', 'DeleteRoom', { room: roomName });
+        alert(`Sala "${roomName}" encerrada com sucesso!`);
+        loadDashboard();
+      } catch (err) {
+        alert(`Erro ao fechar sala: ${err.message}`);
+      }
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.innerText = text;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>

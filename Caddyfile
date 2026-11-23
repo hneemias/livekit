@@ -1,0 +1,5 @@
+# Configuração do Caddy para HTTPS automático na VPS
+{$DOMAIN} {
+    # WebSocket e API do LiveKit Server
+    reverse_proxy 127.0.0.1:7880
+}

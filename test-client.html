@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>LiveKit Local Test Client</title>
+  <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+      margin: 0;
+      padding: 24px;
+    }
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 8px;
+    }
+    p {
+      color: #94a3b8;
+      margin-top: 0;
+    }
+    .card {
+      background: #1e293b;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+    input[type="text"], textarea {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px 12px;
+      border-radius: 6px;
+      border: 1px solid #334155;
+      background: #0f172a;
+      color: #f8fafc;
+      font-size: 0.95rem;
+    }
+    textarea {
+      resize: vertical;
+      font-family: monospace;
+      font-size: 0.85rem;
+    }
+    .checkbox-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-top: 10px;
+      margin-bottom: 15px;
+      background: #0f172a;
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid #334155;
+    }
+    .checkbox-group label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      margin-bottom: 0;
+    }
+    .btn {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.95rem;
+      transition: background 0.2s;
+    }
+    .btn:hover {
+      background: #2563eb;
+    }
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .btn-danger {
+      background: #ef4444;
+    }
+    .btn-danger:hover {
+      background: #dc2626;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 768px) {
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+    .participants-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .participant-badge {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+    .speaking {
+      border-color: #22c55e !important;
+      box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+    }
+    .chat-box {
+      display: flex;
+      flex-direction: column;
+      height: 220px;
+    }
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 0.9rem;
+      margin-bottom: 10px;
+    }
+    .chat-input-row {
+      display: flex;
+      gap: 8px;
+    }
+    .videos {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+      margin-top: 15px;
+    }
+    .video-tile {
+      background: #0f172a;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid #334155;
+      position: relative;
+    }
+    .video-tile video {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      background: #000;
+    }
+    .video-tile .title {
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      color: #cbd5e1;
+      background: rgba(15, 23, 42, 0.9);
+    }
+    #logs {
+      background: #020617;
+      border-radius: 6px;
+      padding: 12px;
+      max-height: 180px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 0.85rem;
+      color: #38bdf8;
+    }
+    .indicator {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 6px;
+      background: #64748b;
+    }
+    .indicator.active {
+      background: #22c55e;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>LiveKit - Cliente de Teste Web Local</h1>
+    <p>Teste de conversação via <strong>Áudio</strong>, <strong>Chat de Texto em Tempo Real</strong> e <strong>Vídeo (Real ou Simulado)</strong>.</p>
+
+    <div class="card">
+      <div class="form-group">
+        <label for="serverUrl">LiveKit WebSocket URL:</label>
+        <input type="text" id="serverUrl" value="ws://localhost:7880">
+      </div>
+      <div class="form-group">
+        <label for="token">Token JWT:</label>
+        <textarea id="token" rows="3" placeholder="Cole o token gerado pelo .\generate-test-token.ps1"></textarea>
+      </div>
+
+      <label>Opções de Mídia para Transmitir:</label>
+      <div class="checkbox-group">
+        <label>
+          <input type="checkbox" id="chkAudio" checked>
+          🎙️ Microfone (Áudio)
+        </label>
+        <label>
+          <input type="checkbox" id="chkVideo">
+          📷 Câmera Real (desmarcado por padrão)
+        </label>
+        <label>
+          <input type="checkbox" id="chkSimulatedVideo">
+          🎨 Simular Vídeo (Animação sem precisar de webcam)
+        </label>
+      </div>
+
+      <button class="btn" id="connectBtn" onclick="toggleConnect()">Conectar à Sala</button>
+    </div>
+
+    <div class="grid-2">
+      <!-- Participantes e Áudio -->
+      <div class="card">
+        <h3>👥 Participantes na Sala</h3>
+        <p style="font-size: 0.85rem; color: #94a3b8;">Borda verde indica detecção de voz ativa (VAD).</p>
+        <ul id="participantsList" class="participants-list">
+          <li style="color: #64748b;">Nenhum participante conectado ainda.</li>
+        </ul>
+
+        <h4 style="margin-top: 20px;">Vídeos / Simulações</h4>
+        <div id="videoContainer" class="videos"></div>
+      </div>
+
+      <!-- Chat em Tempo Real -->
+      <div class="card">
+        <h3>💬 Conversação / Chat em Tempo Real</h3>
+        <div class="chat-box">
+          <div id="chatMessages" class="chat-messages">
+            <div style="color: #64748b; font-style: italic;">Conecte-se para enviar e receber mensagens em tempo real com outros participantes.</div>
+          </div>
+          <div class="chat-input-row">
+            <input type="text" id="chatInput" placeholder="Digite uma mensagem..." onkeydown="if(event.key==='Enter') sendMessage()" disabled>
+            <button class="btn" id="sendBtn" onclick="sendMessage()" disabled>Enviar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>📜 Status e Logs de Conexão</h3>
+      <div id="logs"></div>
+    </div>
+  </div>
+
+  <!-- Canvas oculto para simulação de vídeo sem webcam -->
+  <canvas id="simCanvas" width="320" height="240" style="display:none;"></canvas>
+
+  <script>
+    let currentRoom = null;
+    let simInterval = null;
+
+    function log(msg, color = '#38bdf8') {
+      const el = document.getElementById('logs');
+      const time = new Date().toLocaleTimeString();
+      el.innerHTML += `<div style="color:${color}">[${time}] ${msg}</div>`;
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function addChatMessage(sender, text, isMe = false) {
+      const box = document.getElementById('chatMessages');
+      const msgDiv = document.createElement('div');
+      msgDiv.style.marginBottom = '6px';
+      msgDiv.innerHTML = `<strong style="color: ${isMe ? '#38bdf8' : '#a855f7'}">${escapeHtml(sender)}:</strong> ${escapeHtml(text)}`;
+      box.appendChild(msgDiv);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.innerText = text;
+      return div.innerHTML;
+    }
+
+    function updateParticipantsUI() {
+      if (!currentRoom) return;
+      const list = document.getElementById('participantsList');
+      list.innerHTML = '';
+
+      // Local participant
+      addParticipantItem(currentRoom.localParticipant, true);
+
+      // Remote participants
+      currentRoom.remoteParticipants.forEach(p => {
+        addParticipantItem(p, false);
+      });
+    }
+
+    function addParticipantItem(p, isMe) {
+      const list = document.getElementById('participantsList');
+      const li = document.createElement('li');
+      li.id = 'p-' + p.identity;
+      li.className = 'participant-badge' + (p.isSpeaking ? ' speaking' : '');
+
+      const name = isMe ? `${p.identity} (Você)` : p.identity;
+      const micStatus = p.isMicrophoneEnabled ? '🎙️ Áudio On' : '🔇 Áudio Off';
+      const camStatus = p.isCameraEnabled ? '📹 Vídeo On' : '📵 Vídeo Off';
+
+      li.innerHTML = `
+        <div>
+          <span class="indicator ${p.isSpeaking ? 'active' : ''}"></span>
+          <strong>${escapeHtml(name)}</strong>
+        </div>
+        <div style="font-size: 0.8rem; color: #94a3b8;">
+          ${micStatus} | ${camStatus}
+        </div>
+      `;
+      list.appendChild(li);
+    }
+
+    async function toggleConnect() {
+      const btn = document.getElementById('connectBtn');
+      if (currentRoom) {
+        if (simInterval) clearInterval(simInterval);
+        await currentRoom.disconnect();
+        currentRoom = null;
+        btn.textContent = "Conectar à Sala";
+        btn.classList.remove('btn-danger');
+        document.getElementById('chatInput').disabled = true;
+        document.getElementById('sendBtn').disabled = true;
+        document.getElementById('participantsList').innerHTML = '<li style="color: #64748b;">Nenhum participante conectado.</li>';
+        document.getElementById('videoContainer').innerHTML = '';
+        log("Desconectado da sala.", '#f87171');
+        return;
+      }
+
+      const url = document.getElementById('serverUrl').value.trim();
+      const token = document.getElementById('token').value.trim();
+
+      if (!token) {
+        alert("Por favor, cole um Token gerado no campo 'Token JWT'.");
+        return;
+      }
+
+      const enableAudio = document.getElementById('chkAudio').checked;
+      const enableVideo = document.getElementById('chkVideo').checked;
+      const enableSimVideo = document.getElementById('chkSimulatedVideo').checked;
+
+      btn.disabled = true;
+      try {
+        log(`Conectando ao LiveKit Server em ${url}...`);
+        const room = new LivekitClient.Room({
+          adaptiveStream: true,
+          dynacast: true
+        });
+
+        // Eventos da Sala
+        room
+          .on(LivekitClient.RoomEvent.Connected, () => {
+            log(`✅ Conectado com sucesso à sala: "${room.name}" como "${room.localParticipant.identity}"!`, '#4ade80');
+            updateParticipantsUI();
+          })
+          .on(LivekitClient.RoomEvent.Disconnected, () => {
+            log("Desconectado do servidor LiveKit.", '#f87171');
+            updateParticipantsUI();
+          })
+          .on(LivekitClient.RoomEvent.ParticipantConnected, (p) => {
+            log(`👋 Novo participante entrou: ${p.identity}`, '#a855f7');
+            updateParticipantsUI();
+          })
+          .on(LivekitClient.RoomEvent.ParticipantDisconnected, (p) => {
+            log(`🚪 Participante saiu: ${p.identity}`, '#94a3b8');
+            updateParticipantsUI();
+          })
+          .on(LivekitClient.RoomEvent.ActiveSpeakersChanged, (speakers) => {
+            updateParticipantsUI();
+          })
+          .on(LivekitClient.RoomEvent.TrackSubscribed, (track, publication, participant) => {
+            log(`🔊 Recebendo ${track.kind} de ${participant.identity}`, '#38bdf8');
+            if (track.kind === 'video') {
+              attachVideoTrack(track, participant.identity);
+            } else if (track.kind === 'audio') {
+              // Tocar áudio recebido
+              const audioEl = track.attach();
+              document.body.appendChild(audioEl);
+            }
+            updateParticipantsUI();
+          })
+          .on(LivekitClient.RoomEvent.TrackUnsubscribed, (track) => {
+            track.detach();
+            updateParticipantsUI();
+          })
+          .on(LivekitClient.RoomEvent.DataReceived, (payload, participant) => {
+            const text = new TextDecoder().decode(payload);
+            const sender = participant ? participant.identity : 'Servidor';
+            addChatMessage(sender, text, false);
+          });
+
+        await room.connect(url, token);
+        currentRoom = room;
+
+        // 1. Tentar Áudio / Microfone
+        if (enableAudio) {
+          try {
+            log("Habilitando microfone local...");
+            await room.localParticipant.setMicrophoneEnabled(true);
+            log("🎙️ Microfone conectado e transmitindo áudio!", '#4ade80');
+          } catch (audioErr) {
+            log(`⚠️ Microfone indisponível ou permissão negada: ${audioErr.message}. Continuando em modo escuta.`, '#fbbf24');
+          }
+        }
+
+        // 2. Tentar Câmera Real (se marcado)
+        if (enableVideo) {
+          try {
+            log("Tentando acessar webcam local...");
+            await room.localParticipant.setCameraEnabled(true);
+            room.localParticipant.videoTrackPublications.forEach(pub => {
+              if (pub.track) attachVideoTrack(pub.track, room.localParticipant.identity + " (Você)");
+            });
+            log("📹 Câmera ativada com sucesso!", '#4ade80');
+          } catch (vidErr) {
+            log(`⚠️ Câmera não pôde ser iniciada (${vidErr.message}). A conexão continua ativa!`, '#fbbf24');
+          }
+        }
+
+        // 3. Simular Vídeo com Canvas Animado (se marcado)
+        if (enableSimVideo) {
+          try {
+            log("Iniciando transmissão de vídeo simulado via Canvas...");
+            startSimulatedVideo(room);
+          } catch (simErr) {
+            log(`Erro ao iniciar vídeo simulado: ${simErr.message}`, '#f87171');
+          }
+        }
+
+        updateParticipantsUI();
+        btn.textContent = "Desconectar";
+        btn.classList.add('btn-danger');
+        document.getElementById('chatInput').disabled = false;
+        document.getElementById('sendBtn').disabled = false;
+
+      } catch (err) {
+        log(`❌ Falha ao conectar: ${err.message}`, '#ef4444');
+        console.error(err);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // Publicar vídeo gerado por canvas dinâmico (não precisa de webcam)
+    function startSimulatedVideo(room) {
+      const canvas = document.getElementById('simCanvas');
+      const ctx = canvas.getContext('2d');
+      let hue = 0;
+
+      function draw() {
+        hue = (hue + 2) % 360;
+        ctx.fillStyle = `hsl(${hue}, 60%, 25%)`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 16px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("Vídeo Simulado (LiveKit)", canvas.width / 2, 80);
+
+        ctx.font = "14px monospace";
+        ctx.fillText(room.localParticipant.identity, canvas.width / 2, 120);
+
+        ctx.font = "12px monospace";
+        ctx.fillText(new Date().toLocaleTimeString(), canvas.width / 2, 160);
+      }
+
+      draw();
+      simInterval = setInterval(draw, 100);
+
+      const stream = canvas.captureStream(25);
+      const videoTrack = stream.getVideoTracks()[0];
+      room.localParticipant.publishTrack(videoTrack, { name: 'camera' }).then(pub => {
+        log("🎨 Vídeo simulado transmitido para a sala com sucesso!", '#4ade80');
+        attachVideoTrack(pub.track, room.localParticipant.identity + " (Você - Simulado)");
+      });
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById('chatInput');
+      const text = input.value.trim();
+      if (!text || !currentRoom) return;
+
+      try {
+        const payload = new TextEncoder().encode(text);
+        await currentRoom.localParticipant.publishData(payload, { reliable: true });
+        addChatMessage(currentRoom.localParticipant.identity, text, true);
+        input.value = '';
+      } catch (err) {
+        log(`Erro ao enviar mensagem: ${err.message}`, '#ef4444');
+      }
+    }
+
+    function attachVideoTrack(track, identity) {
+      const container = document.getElementById('videoContainer');
+      const tile = document.createElement('div');
+      tile.className = 'video-tile';
+      
+      const el = track.attach();
+      const title = document.createElement('div');
+      title.className = 'title';
+      title.textContent = identity;
+
+      tile.appendChild(el);
+      tile.appendChild(title);
+      container.appendChild(tile);
+    }
+  </script>
+</body>
+</html>

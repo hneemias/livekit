@@ -1,0 +1,18 @@
+# Binários e executáveis grandes (não subir pro GitHub!)
+bin/
+*.exe
+*.zip
+*.tar.gz
+src/
+
+# Variáveis de ambiente com chaves e senhas reais
+.env
+.env.local
+
+# Logs e arquivos de sistema
+*.log
+.system_generated/
+
+# Dependências Node (se houver)
+node_modules/
+dist/
