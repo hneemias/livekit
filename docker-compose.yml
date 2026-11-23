@@ -7,8 +7,13 @@ services:
       - ./livekit.production.yaml:/etc/livekit.yaml
     environment:
       - LIVEKIT_KEYS=${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}
+    expose:
+      - "7880"
+    labels:
+      - "coolify.managed=true"
+      - "coolify.port=7880"
     ports:
-      # Porta HTTP / WebSocket (o Coolify / Traefik faz o proxy SSL para esta porta)
+      # Porta HTTP / WebSocket
       - "7880:7880"
       # Porta WebRTC TCP fallback
       - "7881:7881"
